@@ -1,12 +1,19 @@
 import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
+import qrcode
+from PIL import Image, ImageDraw, ImageFont
+import io
+import math
 
 st.set_page_config(
-    page_title="霍兰德职业兴趣测评（进阶专业版）",
+    page_title="霍兰德职业兴趣倾向测评",
     page_icon="🎯",
     layout="centered"
 )
+
+# 你的网页实际访问链接（扫码后直接跳转该网页）
+APP_URL = "https://extension-of-holland-test.streamlit.app"
 
 # ================= 题库与维度定义 (每部分 10 题，共 60 题) =================
 sections_data = [
@@ -196,6 +203,120 @@ cross_field_map = {
     "CE": "企业 ERP 实施战略顾问、商业运营合规总监、财务数字化与税务筹划总监"
 }
 
+# ================= 生成分享海报函数 =================
+def create_share_poster(scores, top3_code, first_type, url):
+    width, height = 750, 1050
+    # 创建渐变质感背景
+    img = Image.new("RGB", (width, height), "#0f172a")
+    draw = ImageDraw.Draw(img)
+
+    # 装饰光晕背景
+    draw.ellipse([(-100, -100), (450, 450)], fill="#1e1b4b")
+    draw.ellipse([(400, 700), (850, 1150)], fill="#172554")
+    
+    # 顶部卡片
+    draw.rounded_rectangle([(40, 40), (710, 990)], radius=24, fill="#1e293b", outline="#334155", width=2)
+    
+    # 字体准备
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
+        font_code = ImageFont.truetype("DejaVuSans-Bold.ttf", 52)
+        font_sub = ImageFont.truetype("DejaVuSans.ttf", 18)
+        font_label = ImageFont.truetype("DejaVuSans.ttf", 15)
+        font_qr = ImageFont.truetype("DejaVuSans.ttf", 14)
+    except:
+        font_title = ImageFont.load_default()
+        font_code = ImageFont.load_default()
+        font_sub = ImageFont.load_default()
+        font_label = ImageFont.load_default()
+        font_qr = ImageFont.load_default()
+
+    # 1. 顶部标语
+    draw.text((70, 70), "HOLLAND CAREER PROFILE", font=font_label, fill="#818cf8")
+    draw.text((70, 100), "霍兰德职业兴趣倾向画像", font=font_title, fill="#f8fafc")
+
+    # 2. 霍兰德代码徽章
+    draw.rounded_rectangle([(70, 150), (680, 240)], radius=16, fill="#312e81", outline="#6366f1", width=2)
+    draw.text((95, 168), f"职业代码:  {top3_code}", font=font_code, fill="#e0e7ff")
+
+    # 3. 主导特质解读
+    draw.text((70, 260), f"主导特质：{first_type['name']}", font=font_title, fill="#38bdf8")
+    desc_line = f"特点：{first_type['traits']}"
+    if len(desc_line) > 36:
+        desc_line1 = desc_line[:36]
+        desc_line2 = desc_line[36:72]
+        draw.text((70, 305), desc_line1, font=font_sub, fill="#94a3b8")
+        draw.text((70, 335), desc_line2, font=font_sub, fill="#94a3b8")
+    else:
+        draw.text((70, 305), desc_line, font=font_sub, fill="#94a3b8")
+
+    # 4. 绘制中心六角雷达图
+    cx, cy = 375, 540
+    max_r = 130
+    angles = [i * (2 * math.pi / 6) - math.pi / 2 for i in range(6)]
+    hex_keys = ['R', 'I', 'A', 'S', 'E', 'C']
+    hex_labels = ['R 现实', 'I 研究', 'A 艺术', 'S 社会', 'E 企业', 'C 常规']
+
+    # 绘制同心六边形网格
+    for level in [0.33, 0.66, 1.0]:
+        grid_pts = [(cx + max_r * level * math.cos(a), cy + max_r * level * math.sin(a)) for a in angles]
+        draw.polygon(grid_pts, outline="#334155", fill=None)
+
+    # 绘制轴线与文字
+    for a, label in zip(angles, hex_labels):
+        x = cx + max_r * math.cos(a)
+        y = cy + max_r * math.sin(a)
+        draw.line([(cx, cy), (x, y)], fill="#334155", width=1)
+        lx = cx + (max_r + 26) * math.cos(a) - 20
+        ly = cy + (max_r + 26) * math.sin(a) - 8
+        draw.text((lx, ly), label, font=font_label, fill="#cbd5e1")
+
+    # 绘制得分填充多边形
+    data_pts = []
+    for k, a in zip(hex_keys, angles):
+        val = scores[k]
+        r = (val / 10.0) * max_r
+        data_pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+
+    # 多边形半透明层模拟
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    overlay_draw.polygon(data_pts, fill=(99, 102, 241, 110), outline=(129, 140, 248, 255))
+    img.paste(Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB"))
+    draw = ImageDraw.Draw(img)
+
+    for pt in data_pts:
+        draw.ellipse([(pt[0] - 4, pt[1] - 4), (pt[0] + 4, pt[1] + 4)], fill="#ffffff", outline="#6366f1")
+
+    # 5. 分割线
+    draw.line([(70, 720), (680, 720)], fill="#334155", width=1)
+
+    # 6. 左下角：生成二维码并贴图
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=5,
+        border=2,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="#0f172a", back_color="#ffffff").convert("RGB")
+    qr_img = qr_img.resize((150, 150))
+    img.paste(qr_img, (70, 760))
+
+    # 二维码右侧说明
+    draw.text((245, 785), "长按扫码 · 测测你的职业代码", font=font_title, fill="#f8fafc")
+    draw.text((245, 830), "60 题深度版 · 探索现代跨界与职业潜能", font=font_sub, fill="#94a3b8")
+    draw.text((245, 865), f"Link: {url[:38]}...", font=font_qr, fill="#64748b")
+
+    # 底部版权
+    draw.text((70, 940), "RIASEC Model Assessment © 2026", font=font_label, fill="#475569")
+
+    # 转为字节流
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", quality=95)
+    return buf.getvalue()
+
 # ================= 状态管理 =================
 if "step" not in st.session_state:
     st.session_state.step = 0
@@ -209,11 +330,7 @@ if st.session_state.step < len(sections_data):
     current = sections_data[st.session_state.step]
     
     st.info("💡 **测试规则**：凭第一直觉判断，不要考虑薪资、地位或“能力行不行”，只看“喜不喜欢/乐不乐意做”。")
-    
-    # 仅展示“第X部分”，不展示具体类型
     st.markdown(f"### {current['title']}")
-    
-    # 进度条
     st.progress(st.session_state.step / len(sections_data))
 
     with st.form(key=f"form_{current['key']}"):
@@ -247,15 +364,13 @@ else:
     total_score = sum(scores.values())
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     
-    # 前三位代码
     top3_code = "".join([item[0] for item in sorted_scores[:3]])
     top1_key, top2_key, top3_key = sorted_scores[0][0], sorted_scores[1][0], sorted_scores[2][0]
     
     sec_dict = {s["key"]: s for s in sections_data}
     first_type, second_type, third_type = sec_dict[top1_key], sec_dict[top2_key], sec_dict[top3_key]
 
-    # ---------- 计算心理测量学指标 ----------
-    # 1. 分化度 (Differentiation Index) = 最高分 - 最低分 (范围 0~10)
+    # 1. 分化度
     diff_index = sorted_scores[0][1] - sorted_scores[-1][1]
     if diff_index >= 6:
         diff_status = "高度分化（极度清晰）"
@@ -267,8 +382,7 @@ else:
         diff_status = "低分化（多潜能/扁平）"
         diff_desc = "各维度得分相对接近，表明你具备多向探索潜能，或处于职业定位重塑期。"
 
-    # 2. 六角形一致性 (Consistency Index)
-    # 六边形顺序：R - I - A - S - E - C
+    # 2. 六角形一致性
     hex_order = ['R', 'I', 'A', 'S', 'E', 'C']
     idx1 = hex_order.index(top1_key)
     idx2 = hex_order.index(top2_key)
@@ -276,26 +390,24 @@ else:
     
     if distance == 1:
         consistency_status = "高一致性（天然协同）"
-        consistency_desc = f"{top1_key} 与 {top2_key} 在六角形上完全相邻，内在动机高度自洽，职业发展顺畅，极少产生内在角色冲突。"
+        consistency_desc = f"{top1_key} 与 {top2_key} 在六角形上完全相邻，内在动机高度自洽，职业发展顺畅。"
     elif distance == 2:
         consistency_status = "中一致性（互补多能）"
         consistency_desc = f"{top1_key} 与 {top2_key} 处于中度关联区域，兼具深度与拓展性，非常适合做复合型业务中枢。"
-    else: # distance == 3 (对角线)
+    else:
         consistency_status = "对角张力（跨界破局）"
-        consistency_desc = f"{top1_key} 与 {top2_key} 位于对角线两端（如动手 vs 人际、严谨 vs 自由）。这种组合常伴随心理内在张力，但也是诞生跨界颠覆型人才的温床。"
+        consistency_desc = f"{top1_key} 与 {top2_key} 位于对角线两端，常伴随心理内在张力，也是诞生跨界颠覆型人才的温床。"
 
-    # 3. Prediger 二维空间世界地图投影
-    # Things vs People: TP = 2.00*R + 1.00*I - 1.00*A - 2.00*S - 1.00*E + 1.00*C
-    # Data vs Ideas: DI = 0.00*R - 1.73*I - 1.73*A + 0.00*S + 1.73*E + 1.73*C
+    # 3. Prediger 空间投影
     r, i_sc, a, s, e, c = scores['R'], scores['I'], scores['A'], scores['S'], scores['E'], scores['C']
     tp_score = 2.0 * r + 1.0 * i_sc - 1.0 * a - 2.0 * s - 1.0 * e + 1.0 * c
     di_score = - 1.73 * i_sc - 1.73 * a + 1.73 * e + 1.73 * c
 
-    # 页面标题
+    # 页面头部
     st.success(f"## 🏆 您的霍兰德职业代码：**{top3_code}**")
     st.caption(f"主导模式：{first_type['name'].split()[0]}（主） + {second_type['name'].split()[0]}（辅） + {third_type['name'].split()[0]}（辅）")
 
-    # 四大标签页
+    # 标签页内容
     tab1, tab2, tab3, tab4 = st.tabs([
         "📊 六角雷达与能量占比", 
         "🧭 心理模型与空间投影", 
@@ -303,7 +415,6 @@ else:
         "💼 现代职业与跨界建议"
     ])
 
-    # ================= 标签页 1：图表展示 =================
     with tab1:
         st.markdown("#### 1. 六维多边形雷达图 (0–10分)")
         categories = ['现实型(R)', '研究型(I)', '艺术型(A)', '社会型(S)', '企业型(E)', '常规型(C)']
@@ -344,49 +455,35 @@ else:
             fig_pie.update_layout(height=260, margin=dict(l=20, r=20, t=10, b=10))
             st.plotly_chart(fig_pie, use_container_width=True)
 
-            # 进度条
             for s in sections_data:
                 sc = scores[s['key']]
                 pct = (sc / total_score) * 100
                 st.write(f"**{s['name']}**：`{sc} / 10 分`（占比 **{pct:.1f}%**）")
                 st.progress(pct / 100)
-        else:
-            st.warning("所有项目得分为 0，无法计算能量占比。")
 
-    # ================= 标签页 2：进阶指标 =================
     with tab2:
         st.markdown("### 🔬 心理测量学进阶模型诊断")
-        
         col_a, col_b = st.columns(2)
         with col_a:
-            st.metric("剖面分化度 (Differentiation)", f"{diff_index} 分", diff_status)
+            st.metric("剖面分化度", f"{diff_index} 分", diff_status)
         with col_b:
-            st.metric("六角一致性 (Consistency)", f"距离: {distance}", consistency_status)
+            st.metric("六角一致性", f"距离: {distance}", consistency_status)
 
         st.markdown(f"• **分化度解读**：{diff_desc}")
         st.markdown(f"• **一致性解读**：{consistency_desc}")
 
         st.markdown("---")
         st.markdown("#### 🗺️ Prediger 职场世界地图坐标投影")
-        st.caption("根据心理学空间模型将六维度加权投射至「事物-人际 (Things-People)」与「数据-理念 (Data-Ideas)」两极轴：")
-
-        # 绘制二维散点图
         fig_scatter = go.Figure()
-        
-        # 绘制象限背景区域
         fig_scatter.add_vline(x=0, line_dash="dash", line_color="#cbd5e1")
         fig_scatter.add_hline(y=0, line_dash="dash", line_color="#cbd5e1")
-
-        # 标注用户点
         fig_scatter.add_trace(go.Scatter(
-            x=[tp_score],
-            y=[di_score],
+            x=[tp_score], y=[di_score],
             mode='markers+text',
             marker=dict(size=14, color='#4f46e5'),
             text=["📍 你的核心落点"],
             textposition="top center"
         ))
-
         fig_scatter.update_layout(
             xaxis=dict(title="← 偏好【人际/社群】 (People) | (Things) 偏好【事务/物理】 →", range=[-25, 25]),
             yaxis=dict(title="← 偏好【抽象/理念】 (Ideas) | (Data) 偏好【数据/规则】 →", range=[-25, 25]),
@@ -395,46 +492,52 @@ else:
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # ================= 标签页 3：深度特质解析 =================
     with tab3:
         st.markdown(f"### 核心主导特质：{first_type['name']}")
         st.write(f"**核心标签：** `{first_type['tagline']}`")
-        
         st.markdown("**🧠 你的特质表现：**")
         st.write(first_type["traits"])
-        
         st.markdown("**⚡ 现代社会/职场核心竞争力：**")
         st.write(first_type["advantage"])
-
         st.markdown("---")
         st.markdown("#### 辅助动力源：")
         st.markdown(f"- **次级主导特质（{second_type['name']}）：** {second_type['traits']}")
         st.markdown(f"- **协同潜能特质（{third_type['name']}）：** {third_type['traits']}")
 
-    # ================= 标签页 4：现代职业与细化跨界 =================
     with tab4:
         st.markdown(f"### 🎯 优先探索的现代职业领域（基于 {first_type['name'].split()[0]}）")
         for job in first_type["modern_jobs"]:
             st.markdown(f"- **{job}**")
 
         st.markdown("---")
-        
-        # 获取复合代码（例如 IA 或 AI）
         cross_pair_key = f"{top1_key}{top2_key}"
         cross_desc = cross_field_map.get(cross_pair_key, "跨领域综合实践与创新管理专家")
-        
         st.markdown(f"### 🔀 深度复合跨界方向：**{cross_pair_key} 组合**")
         st.caption(f"当 **{first_type['name'].split()[0]}** 遇到 **{second_type['name'].split()[0]}**")
-        
         st.info(f"💡 **前沿跨界赛道与岗位推荐：**\n\n{cross_desc}")
-        
-        st.markdown("#### 🚀 职业发展策略建议：")
-        st.write(f"1. **以 {first_type['name'].split()[0]} 为基石**：将主导维度的能力打磨成最硬核的个人护城河。")
-        st.write(f"2. **以 {second_type['name'].split()[0]} 为杠杆**：运用次级特质进行差异化跨界竞争，形成独特的个人 IP。")
-        st.write(f"3. **警惕内耗**：当一致性偏向张力组合时，学会在不同项目阶段切换工作心智，避免在细节与全局中反复纠结。")
+
+    # ================= 底部：专属分享卡片区域 =================
+    st.markdown("---")
+    st.subheader("📤 分享我的测评结果")
+    
+    share_text = f"🎯 我的霍兰德职业代码是【{top3_code}】（主导：{first_type['name']}）！\n✨ 特质画像：{first_type['traits'][:45]}...\n快来测测你的专属职业倾向："
+    st.text_area("📋 复制分享文案：", f"{share_text}\n{APP_URL}", height=90)
+
+    # 动态生成海报图片
+    poster_bytes = create_share_poster(scores, top3_code, first_type, APP_URL)
+    
+    with st.expander("🖼️ 点击预览/下载高清分享卡片（带六边形图 + 专属二维码）", expanded=True):
+        st.image(poster_bytes, caption="专属测评结果分享卡片", use_container_width=True)
+        st.download_button(
+            label="💾 下载高清分享卡片 (PNG)",
+            data=poster_bytes,
+            file_name=f"Holland_Profile_{top3_code}.png",
+            mime="image/png",
+            use_container_width=True
+        )
 
     st.markdown("---")
-    if st.button("🔄 重新进行测评"):
+    if st.button("🔄 重新进行测评", use_container_width=True):
         st.session_state.step = 0
         st.session_state.scores = {}
         st.rerun()
