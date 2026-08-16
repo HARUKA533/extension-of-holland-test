@@ -5,6 +5,8 @@ import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import io
 import math
+import os
+import urllib.request
 
 st.set_page_config(
     page_title="霍兰德职业兴趣倾向测评",
@@ -12,8 +14,25 @@ st.set_page_config(
     layout="centered"
 )
 
-# 你的网页实际访问链接（扫码后直接跳转该网页）
+# 你的网页实际访问链接
 APP_URL = "https://extension-of-holland-test.streamlit.app"
+
+# ================= 自动加载/下载中文字体 =================
+@st.cache_resource
+def get_chinese_font_path():
+    # 优先检查本地是否存在 font.ttf
+    if os.path.exists("font.ttf"):
+        return "font.ttf"
+    
+    font_path = "wqy-microhei.ttc"
+    if not os.path.exists(font_path):
+        # 从官方镜像高速下载开源中文字体 (文泉驿微米黑)
+        font_url = "https://github.com/anthonyfok/fonts-wqy-microhei/raw/master/wqy-microhei.ttc"
+        try:
+            urllib.request.urlretrieve(font_url, font_path)
+        except Exception:
+            return None
+    return font_path
 
 # ================= 题库与维度定义 (每部分 10 题，共 60 题) =================
 sections_data = [
@@ -33,7 +52,7 @@ sections_data = [
             "享受从无到有亲手把一个物理产品/原型打磨制作出来的过程。"
         ],
         "traits": "务实落地、行动力极强、讲求实效、擅长物理空间与实体系统的构建与调校。",
-        "advantage": "在 AI 与数字化深入发展的时代，软硬件协同调试、现场工程控制、精密制造与物理世界落地能力具有天然的高壁垒与不可替代性。",
+        "advantage": "在 AI 与数字化时代，软硬件协同调试、现场工程控制与物理世界落地能力具有天然的高壁垒与不可替代性。",
         "modern_jobs": [
             "智能硬件 / 机器人调试与运维专家",
             "新能源汽车三电系统 / 智能座舱测试工程师",
@@ -58,7 +77,7 @@ sections_data = [
             "做决定时更依赖客观事实和数据支撑，而非主观情感或从众心理。"
         ],
         "traits": "理智敏锐、逻辑严密、以好奇心驱动、深度思考者，擅长抽象建模与底层归因。",
-        "advantage": "在信息爆炸时代，能穿透表象直达本质，在算法研发、复杂系统决策、技术突破与深度研判上处于核心价值链顶端。",
+        "advantage": "在信息爆炸时代，能穿透表象直达本质，在算法研发、复杂系统决策与深度研判上处于核心价值链顶端。",
         "modern_jobs": [
             "AI 算法研究员 / 提示词架构师 (Prompt Engineer)",
             "大数据科学家 / 商业智能 (BI) 决策建模专家",
@@ -83,7 +102,7 @@ sections_data = [
             "在充满自由与启发的工作氛围中，能迸发出极强的工作爆发力。"
         ],
         "traits": "审美出众、直觉敏锐、反传统、情绪丰沛，善于创造独特的情感共鸣与非标内容。",
-        "advantage": "在同质化与标准化泛滥的时代，审美溢价、情绪共鸣构建与非线性创新是品牌打造、爆款策划与破圈传播的稀缺驱动力。",
+        "advantage": "在同质化泛滥的时代，审美溢价、情绪共鸣构建与非线性创新是品牌打造、爆款策划与破圈传播的稀缺驱动力。",
         "modern_jobs": [
             "UI/UX 交互体验总监 / 情感化人机交互设计师",
             "AIGC 视觉创作者 / AI 生成艺术指导",
@@ -108,7 +127,7 @@ sections_data = [
             "对如何设计更具人文关怀的产品、服务或体验流程有深刻体会。"
         ],
         "traits": "高同理心、利他导向、善于沟通赋能、注重心理连接与人际生态的健康度。",
-        "advantage": "技术越冰冷，情绪价值与人文温度就越昂贵。深度共情、信任构建、高敏沟通与社群凝聚力是最难被算法自动化取代的核心能力。",
+        "advantage": "技术越冰冷，情绪价值越昂贵。深度共情、信任构建、高敏沟通与社群凝聚力是最难被算法替代的核心能力。",
         "modern_jobs": [
             "专业心理咨询师 / 个人职业生涯发展教练",
             "核心客户成功专家 (CSM) / 高净值私域社群主理人",
@@ -133,7 +152,7 @@ sections_data = [
             "喜欢掌舵全局、驱动业务增长，胜过只负责局部技术细节。"
         ],
         "traits": "极强目标驱动、野心与魄力兼备、精于说服与资源整合、商业敏锐度极高。",
-        "advantage": "擅长在不确定性中穿透迷雾，将技术、创意与人才高效打包并推向市场实现商业闭环，是商业机构不可或缺的领航者与开拓者。",
+        "advantage": "擅长在不确定性中穿透迷雾，将技术、创意与人才高效打包并推向市场实现商业闭环，是项目的核心操盘手。",
         "modern_jobs": [
             "商业化出海业务合伙人 / 独立出海商业主理人",
             "AI / 科技产品商业化总监 (GTM Lead)",
@@ -158,7 +177,7 @@ sections_data = [
             "更倾向于稳健、确定性高的推进节奏，讨厌朝令夕改和不可控的风险。"
         ],
         "traits": "严谨精细、高度自律、恪守规则、精于流程梳理与风险控制，追求零差错交付。",
-        "advantage": "当业务从 0 到 1 走向 1 到 100 时，能够构建坚实运转的底层系统与制度屏障，是组织规模化扩张与持续安全运行的底盘基石。",
+        "advantage": "当业务走向规模化时，能够构建坚实运转的底层系统与制度屏障，是组织规模化扩张与持续安全运行的底盘基石。",
         "modern_jobs": [
             "企业数据合规与算法伦理风控官",
             "财务自动化 (RPA) 与商业流程审计专家",
@@ -169,7 +188,6 @@ sections_data = [
     }
 ]
 
-# 30 种两两复合跨界细化方案
 cross_field_map = {
     "RI": "软硬件协同开发、物联网 (IoT) 架构、精密科学仪器研发、工业机器人底层控制系统",
     "RA": "工业产品外观造型设计、建筑结构与空间艺术、电影级实体特效道具与机电动效开发",
@@ -203,85 +221,84 @@ cross_field_map = {
     "CE": "企业 ERP 实施战略顾问、商业运营合规总监、财务数字化与税务筹划总监"
 }
 
-# ================= 生成分享海报函数 =================
+# ================= 修复版分享海报生成函数 =================
 def create_share_poster(scores, top3_code, first_type, url):
-    width, height = 750, 1050
-    # 创建渐变质感背景
+    width, height = 750, 1080
     img = Image.new("RGB", (width, height), "#0f172a")
     draw = ImageDraw.Draw(img)
 
     # 装饰光晕背景
     draw.ellipse([(-100, -100), (450, 450)], fill="#1e1b4b")
-    draw.ellipse([(400, 700), (850, 1150)], fill="#172554")
+    draw.ellipse([(400, 750), (850, 1200)], fill="#172554")
     
     # 顶部卡片
-    draw.rounded_rectangle([(40, 40), (710, 990)], radius=24, fill="#1e293b", outline="#334155", width=2)
+    draw.rounded_rectangle([(35, 35), (715, 1030)], radius=24, fill="#1e293b", outline="#334155", width=2)
     
-    # 字体准备
-    try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 26)
-        font_code = ImageFont.truetype("DejaVuSans-Bold.ttf", 52)
-        font_sub = ImageFont.truetype("DejaVuSans.ttf", 18)
-        font_label = ImageFont.truetype("DejaVuSans.ttf", 15)
-        font_qr = ImageFont.truetype("DejaVuSans.ttf", 14)
-    except:
-        font_title = ImageFont.load_default()
-        font_code = ImageFont.load_default()
-        font_sub = ImageFont.load_default()
-        font_label = ImageFont.load_default()
-        font_qr = ImageFont.load_default()
+    # 获取并加载中文字体
+    font_file = get_chinese_font_path()
+    if font_file:
+        try:
+            font_title = ImageFont.truetype(font_file, 26)
+            font_code = ImageFont.truetype(font_file, 50)
+            font_sub = ImageFont.truetype(font_file, 17)
+            font_label = ImageFont.truetype(font_file, 16)
+            font_small = ImageFont.truetype(font_file, 13)
+        except Exception:
+            font_title = font_code = font_sub = font_label = font_small = ImageFont.load_default()
+    else:
+        font_title = font_code = font_sub = font_label = font_small = ImageFont.load_default()
 
     # 1. 顶部标语
-    draw.text((70, 70), "HOLLAND CAREER PROFILE", font=font_label, fill="#818cf8")
-    draw.text((70, 100), "霍兰德职业兴趣倾向画像", font=font_title, fill="#f8fafc")
+    draw.text((65, 65), "HOLLAND CAREER PROFILE", font=font_small, fill="#818cf8")
+    draw.text((65, 95), "霍兰德职业兴趣倾向画像", font=font_title, fill="#f8fafc")
 
     # 2. 霍兰德代码徽章
-    draw.rounded_rectangle([(70, 150), (680, 240)], radius=16, fill="#312e81", outline="#6366f1", width=2)
-    draw.text((95, 168), f"职业代码:  {top3_code}", font=font_code, fill="#e0e7ff")
+    draw.rounded_rectangle([(65, 145), (685, 235)], radius=16, fill="#312e81", outline="#6366f1", width=2)
+    draw.text((90, 162), f"职业代码:  {top3_code}", font=font_code, fill="#e0e7ff")
 
     # 3. 主导特质解读
-    draw.text((70, 260), f"主导特质：{first_type['name']}", font=font_title, fill="#38bdf8")
-    desc_line = f"特点：{first_type['traits']}"
-    if len(desc_line) > 36:
-        desc_line1 = desc_line[:36]
-        desc_line2 = desc_line[36:72]
-        draw.text((70, 305), desc_line1, font=font_sub, fill="#94a3b8")
-        draw.text((70, 335), desc_line2, font=font_sub, fill="#94a3b8")
-    else:
-        draw.text((70, 305), desc_line, font=font_sub, fill="#94a3b8")
+    draw.text((65, 255), f"主导特质：{first_type['name']}", font=font_title, fill="#38bdf8")
+    
+    # 自动换行
+    traits_text = f"特点：{first_type['traits']}"
+    max_chars_per_line = 32
+    lines = [traits_text[i:i+max_chars_per_line] for i in range(0, len(traits_text), max_chars_per_line)]
+    for idx, line in enumerate(lines[:2]):
+        draw.text((65, 298 + idx * 26), line, font=font_sub, fill="#94a3b8")
 
     # 4. 绘制中心六角雷达图
-    cx, cy = 375, 540
-    max_r = 130
+    cx, cy = 375, 560
+    max_r = 135
     angles = [i * (2 * math.pi / 6) - math.pi / 2 for i in range(6)]
     hex_keys = ['R', 'I', 'A', 'S', 'E', 'C']
     hex_labels = ['R 现实', 'I 研究', 'A 艺术', 'S 社会', 'E 企业', 'C 常规']
 
-    # 绘制同心六边形网格
+    # 同心六边形网格
     for level in [0.33, 0.66, 1.0]:
         grid_pts = [(cx + max_r * level * math.cos(a), cy + max_r * level * math.sin(a)) for a in angles]
         draw.polygon(grid_pts, outline="#334155", fill=None)
 
-    # 绘制轴线与文字
+    # 轴线与坐标标签
     for a, label in zip(angles, hex_labels):
         x = cx + max_r * math.cos(a)
         y = cy + max_r * math.sin(a)
         draw.line([(cx, cy), (x, y)], fill="#334155", width=1)
-        lx = cx + (max_r + 26) * math.cos(a) - 20
-        ly = cy + (max_r + 26) * math.sin(a) - 8
+        
+        # 标签微调
+        lx = cx + (max_r + 28) * math.cos(a) - 22
+        ly = cy + (max_r + 28) * math.sin(a) - 10
         draw.text((lx, ly), label, font=font_label, fill="#cbd5e1")
 
-    # 绘制得分填充多边形
+    # 得分多边形
     data_pts = []
     for k, a in zip(hex_keys, angles):
         val = scores[k]
         r = (val / 10.0) * max_r
         data_pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
 
-    # 多边形半透明层模拟
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.polygon(data_pts, fill=(99, 102, 241, 110), outline=(129, 140, 248, 255))
+    overlay_draw.polygon(data_pts, fill=(99, 102, 241, 115), outline=(129, 140, 248, 255))
     img.paste(Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB"))
     draw = ImageDraw.Draw(img)
 
@@ -289,30 +306,24 @@ def create_share_poster(scores, top3_code, first_type, url):
         draw.ellipse([(pt[0] - 4, pt[1] - 4), (pt[0] + 4, pt[1] + 4)], fill="#ffffff", outline="#6366f1")
 
     # 5. 分割线
-    draw.line([(70, 720), (680, 720)], fill="#334155", width=1)
+    draw.line([(65, 750), (685, 750)], fill="#334155", width=1)
 
-    # 6. 左下角：生成二维码并贴图
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=5,
-        border=2,
-    )
+    # 6. 二维码生成
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=5, border=2)
     qr.add_data(url)
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="#0f172a", back_color="#ffffff").convert("RGB")
     qr_img = qr_img.resize((150, 150))
-    img.paste(qr_img, (70, 760))
+    img.paste(qr_img, (65, 780))
 
-    # 二维码右侧说明
-    draw.text((245, 785), "长按扫码 · 测测你的职业代码", font=font_title, fill="#f8fafc")
-    draw.text((245, 830), "60 题深度版 · 探索现代跨界与职业潜能", font=font_sub, fill="#94a3b8")
-    draw.text((245, 865), f"Link: {url[:38]}...", font=font_qr, fill="#64748b")
+    # 二维码说明文字
+    draw.text((235, 805), "长按扫码 · 测测你的职业代码", font=font_title, fill="#f8fafc")
+    draw.text((235, 850), "60 题深度版 · 探索现代跨界与职业潜能", font=font_sub, fill="#94a3b8")
+    draw.text((235, 885), f"网址: {url[:36]}...", font=font_small, fill="#64748b")
 
     # 底部版权
-    draw.text((70, 940), "RIASEC Model Assessment © 2026", font=font_label, fill="#475569")
+    draw.text((65, 980), "RIASEC Model Assessment © 2026", font=font_small, fill="#475569")
 
-    # 转为字节流
     buf = io.BytesIO()
     img.save(buf, format="PNG", quality=95)
     return buf.getvalue()
@@ -359,7 +370,6 @@ if st.session_state.step < len(sections_data):
 
 # ================= 结果报告页面 =================
 else:
-    # 提取六维度分数 (0~10 分)
     scores = {s["key"]: st.session_state.scores.get(f"{s['key']}-实际得分", 0) for s in sections_data}
     total_score = sum(scores.values())
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -370,7 +380,7 @@ else:
     sec_dict = {s["key"]: s for s in sections_data}
     first_type, second_type, third_type = sec_dict[top1_key], sec_dict[top2_key], sec_dict[top3_key]
 
-    # 1. 分化度
+    # 指标计算
     diff_index = sorted_scores[0][1] - sorted_scores[-1][1]
     if diff_index >= 6:
         diff_status = "高度分化（极度清晰）"
@@ -382,7 +392,6 @@ else:
         diff_status = "低分化（多潜能/扁平）"
         diff_desc = "各维度得分相对接近，表明你具备多向探索潜能，或处于职业定位重塑期。"
 
-    # 2. 六角形一致性
     hex_order = ['R', 'I', 'A', 'S', 'E', 'C']
     idx1 = hex_order.index(top1_key)
     idx2 = hex_order.index(top2_key)
@@ -398,16 +407,13 @@ else:
         consistency_status = "对角张力（跨界破局）"
         consistency_desc = f"{top1_key} 与 {top2_key} 位于对角线两端，常伴随心理内在张力，也是诞生跨界颠覆型人才的温床。"
 
-    # 3. Prediger 空间投影
     r, i_sc, a, s, e, c = scores['R'], scores['I'], scores['A'], scores['S'], scores['E'], scores['C']
     tp_score = 2.0 * r + 1.0 * i_sc - 1.0 * a - 2.0 * s - 1.0 * e + 1.0 * c
     di_score = - 1.73 * i_sc - 1.73 * a + 1.73 * e + 1.73 * c
 
-    # 页面头部
     st.success(f"## 🏆 您的霍兰德职业代码：**{top3_code}**")
     st.caption(f"主导模式：{first_type['name'].split()[0]}（主） + {second_type['name'].split()[0]}（辅） + {third_type['name'].split()[0]}（辅）")
 
-    # 标签页内容
     tab1, tab2, tab3, tab4 = st.tabs([
         "📊 六角雷达与能量占比", 
         "🧭 心理模型与空间投影", 
@@ -460,6 +466,26 @@ else:
                 pct = (sc / total_score) * 100
                 st.write(f"**{s['name']}**：`{sc} / 10 分`（占比 **{pct:.1f}%**）")
                 st.progress(pct / 100)
+
+        # ---------------- 分享卡片模块移至此处 ----------------
+        st.markdown("---")
+        st.subheader("📤 分享我的测评结果")
+        
+        share_text = f"🎯 我的霍兰德职业代码是【{top3_code}】（主导：{first_type['name']}）！\n✨ 特质画像：{first_type['traits'][:45]}...\n快来测测你的专属职业倾向："
+        st.text_area("📋 复制分享文案：", f"{share_text}\n{APP_URL}", height=90)
+
+        # 动态生成海报图片
+        poster_bytes = create_share_poster(scores, top3_code, first_type, APP_URL)
+        
+        with st.expander("🖼️ 点击预览/下载高清分享卡片", expanded=True):
+            st.image(poster_bytes, caption="专属测评结果分享卡片", use_container_width=True)
+            st.download_button(
+                label="💾 下载高清分享卡片 (PNG)",
+                data=poster_bytes,
+                file_name=f"Holland_Profile_{top3_code}.png",
+                mime="image/png",
+                use_container_width=True
+            )
 
     with tab2:
         st.markdown("### 🔬 心理测量学进阶模型诊断")
@@ -516,26 +542,7 @@ else:
         st.caption(f"当 **{first_type['name'].split()[0]}** 遇到 **{second_type['name'].split()[0]}**")
         st.info(f"💡 **前沿跨界赛道与岗位推荐：**\n\n{cross_desc}")
 
-    # ================= 底部：专属分享卡片区域 =================
-    st.markdown("---")
-    st.subheader("📤 分享我的测评结果")
-    
-    share_text = f"🎯 我的霍兰德职业代码是【{top3_code}】（主导：{first_type['name']}）！\n✨ 特质画像：{first_type['traits'][:45]}...\n快来测测你的专属职业倾向："
-    st.text_area("📋 复制分享文案：", f"{share_text}\n{APP_URL}", height=90)
-
-    # 动态生成海报图片
-    poster_bytes = create_share_poster(scores, top3_code, first_type, APP_URL)
-    
-    with st.expander("🖼️ 点击预览/下载高清分享卡片（带六边形图 + 专属二维码）", expanded=True):
-        st.image(poster_bytes, caption="专属测评结果分享卡片", use_container_width=True)
-        st.download_button(
-            label="💾 下载高清分享卡片 (PNG)",
-            data=poster_bytes,
-            file_name=f"Holland_Profile_{top3_code}.png",
-            mime="image/png",
-            use_container_width=True
-        )
-
+    # ================= 底部重置按钮（全局存在） =================
     st.markdown("---")
     if st.button("🔄 重新进行测评", use_container_width=True):
         st.session_state.step = 0
