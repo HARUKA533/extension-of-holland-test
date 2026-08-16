@@ -7,6 +7,8 @@ import io
 import math
 import os
 import urllib.request
+import json
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="霍兰德职业兴趣倾向测评",
@@ -15,7 +17,7 @@ st.set_page_config(
 )
 
 # 你的网页实际访问链接
-APP_URL = "https://exhollandtest.streamlit.app/"
+APP_URL = "https://extension-of-holland-test.streamlit.app"
 
 # ================= 自动加载/下载中文字体 =================
 @st.cache_resource
@@ -33,6 +35,59 @@ def get_chinese_font_path():
         except Exception:
             return None
     return font_path
+
+# ================= 一键复制组件 =================
+def copy_button(text_to_copy: str, button_text: str = "📋 一键复制分享文案"):
+    text_json = json.dumps(text_to_copy)
+    html_code = f"""
+    <div style="margin: 8px 0 16px 0;">
+        <button id="copy-btn" onclick="copyToClipboard()" style="
+            width: 100%;
+            background-color: #4f46e5;
+            color: #ffffff;
+            border: none;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        ">
+            {button_text}
+        </button>
+        <div id="copy-msg" style="
+            display: none;
+            color: #059669;
+            font-size: 13px;
+            margin-top: 6px;
+            text-align: center;
+            font-weight: 500;
+        ">
+            ✅ 已成功复制到剪贴板，可直接粘贴分享！
+        </div>
+    </div>
+    <script>
+        function copyToClipboard() {{
+            const text = {text_json};
+            navigator.clipboard.writeText(text).then(function() {{
+                const btn = document.getElementById('copy-btn');
+                const msg = document.getElementById('copy-msg');
+                btn.style.backgroundColor = '#059669';
+                btn.innerText = '✅ 复制成功！';
+                msg.style.display = 'block';
+                setTimeout(function() {{
+                    btn.style.backgroundColor = '#4f46e5';
+                    btn.innerText = '{button_text}';
+                    msg.style.display = 'none';
+                }}, 2500);
+            }}).catch(function(err) {{
+                alert('复制失败，请手动长按复制');
+            }});
+        }}
+    </script>
+    """
+    components.html(html_code, height=65)
 
 # ================= 题库与维度定义 (每部分 10 题，共 60 题) =================
 sections_data = [
@@ -221,7 +276,7 @@ cross_field_map = {
     "CE": "企业 ERP 实施战略顾问、商业运营合规总监、财务数字化与税务筹划总监"
 }
 
-# ================= 修复版分享海报生成函数 =================
+# ================= 分享海报生成函数 =================
 def create_share_poster(scores, top3_code, first_type, url):
     width, height = 750, 1080
     img = Image.new("RGB", (width, height), "#0f172a")
@@ -284,7 +339,6 @@ def create_share_poster(scores, top3_code, first_type, url):
         y = cy + max_r * math.sin(a)
         draw.line([(cx, cy), (x, y)], fill="#334155", width=1)
         
-        # 标签微调
         lx = cx + (max_r + 28) * math.cos(a) - 22
         ly = cy + (max_r + 28) * math.sin(a) - 10
         draw.text((lx, ly), label, font=font_label, fill="#cbd5e1")
@@ -467,12 +521,19 @@ else:
                 st.write(f"**{s['name']}**：`{sc} / 10 分`（占比 **{pct:.1f}%**）")
                 st.progress(pct / 100)
 
-        # ---------------- 分享卡片模块移至此处 ----------------
+        # ---------------- 分享与一键复制模块 ----------------
         st.markdown("---")
         st.subheader("📤 分享我的测评结果")
         
-        share_text = f"🎯 我的霍兰德职业代码是【{top3_code}】（主导：{first_type['name']}）！\n✨ 特质画像：{first_type['traits'][:45]}...\n快来测测你的专属职业倾向："
-        st.text_area("📋 复制分享文案：", f"{share_text}\n{APP_URL}", height=90)
+        share_content = (
+            f"🎯 我的霍兰德职业代码是【{top3_code}】（主导：{first_type['name']}）！\n"
+            f"✨ 特质画像：{first_type['traits']}\n"
+            f"🚀 推荐方向：{', '.join(first_type['modern_jobs'][:3])}\n"
+            f"👉 快来测测你的职业潜能与空间投影：{APP_URL}"
+        )
+        
+        # 原生一键复制按钮
+        copy_button(share_content, button_text="📋 一键复制分享文案")
 
         # 动态生成海报图片
         poster_bytes = create_share_poster(scores, top3_code, first_type, APP_URL)
@@ -542,7 +603,7 @@ else:
         st.caption(f"当 **{first_type['name'].split()[0]}** 遇到 **{second_type['name'].split()[0]}**")
         st.info(f"💡 **前沿跨界赛道与岗位推荐：**\n\n{cross_desc}")
 
-    # ================= 底部重置按钮（全局存在） =================
+    # ================= 底部重置按钮 =================
     st.markdown("---")
     if st.button("🔄 重新进行测评", use_container_width=True):
         st.session_state.step = 0
