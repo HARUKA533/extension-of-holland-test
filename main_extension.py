@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # 你的网页实际访问链接
-APP_URL = "https://extension-of-holland-test.streamlit.app"
+APP_URL = "https://exhollandtest.streamlit.app/"
 
 # ================= 自动加载/下载中文字体 =================
 @st.cache_resource
